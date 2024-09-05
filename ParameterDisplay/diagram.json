@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "author": "Harsha Vardhan",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 115.8, "left": 162.6, "attrs": {} },
+    {
+      "type": "wokwi-ili9341",
+      "id": "lcd1",
+      "top": -113.4,
+      "left": -109.5,
+      "rotate": 270,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [ "lcd1:VCC", "uno:3.3V", "red", [ "v124.8", "h355.2" ] ],
+    [ "lcd1:GND", "uno:GND.2", "black", [ "v115.2", "h355.2" ] ],
+    [ "lcd1:RST", "uno:8", "green", [ "v19.2", "h124.8", "v-144", "h220.8" ] ],
+    [ "lcd1:CS", "uno:5", "green", [ "v28.8", "h144", "v-144", "h240" ] ],
+    [ "lcd1:D/C", "uno:9", "green", [ "v9.6", "h105.6", "v-144", "h220.8" ] ],
+    [ "lcd1:MOSI", "uno:6", "green", [ "v38.4", "h124.79", "v-144", "h230.4" ] ],
+    [ "lcd1:SCK", "uno:7", "green", [ "v48", "h124.79", "v-192", "h201.6" ] ],
+    [ "lcd1:LED", "uno:5V", "green", [ "v134.4", "h287.99" ] ]
+  ],
+  "dependencies": {}
+}
