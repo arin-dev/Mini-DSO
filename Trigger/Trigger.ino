@@ -3,15 +3,23 @@
 #include <CircularBuffer.hpp>
 
 // For the Adafruit shield, these are the default.
-#define TFT_DC 9
-#define TFT_CS 5 //4
-#define TFT_RST 8
-#define TFT_MOSI 6 //11
-#define TFT_MISO 12
-#define TFT_CLK 7 //13
+// #define TFT_DC 9
+// #define TFT_CS 5 //4
+// #define TFT_RST 8
+// #define TFT_MOSI 6 //11
+// #define TFT_MISO 12
+// #define TFT_CLK 7 //13
+
+// // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+// Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC 10
+#define TFT_RST 9
+#define TFT_CS 8
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 
 const int analogPin = A0;
 const int potPin = A5;
@@ -75,7 +83,8 @@ void loop() {
   //   Serial.print(" ");
   // }
   // Serial.println(" ");
-  int potValue = analogRead(potPin);
+  // int potValue = analogRead(potPin);
+  int potValue = 150;
   // int triggerLevel = map(potValue, 0, 1023, 0, screenHeight); // Map pot value to screen height
   int triggerLevel = map(potValue, 0, 1023, screenHeight - 50, 50); // Map pot value to screen height
 

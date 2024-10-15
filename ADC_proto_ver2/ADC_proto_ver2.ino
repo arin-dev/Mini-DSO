@@ -117,8 +117,8 @@ void setup() {
 }
 
 void loop() {
-  float t0, t1;
-  t0 = micros();
+  // float t0, t1;
+  // t0 = micros();
   int timeScale = read(timePin, 1, 10);
   // int newSampleY = read(inputPin, 30, screenHeight - 30);
   int newSampleY = readADCresult(30, screenHeight - 30);
@@ -128,7 +128,7 @@ void loop() {
   sampleBuffer.unshift(newSampleY);
   sinceDisplayUpdated++;
   // int triggerLevel = = read(trigPin, 30, screenHeight - 30);
-  int triggerLevel = 240;
+  int triggerLevel = 140;
   // if(triggerMode = 'a'){
   //     triggerLevel = calculateTriggerLevel();
   // }
@@ -137,23 +137,23 @@ void loop() {
   // }
   
 
-  float AScale = (float)read(AScalePin, 5, 20)/(float)10;
+  // float AScale = (float)read(AScalePin, 5, 20)/(float)10;
 
 
   // Trigger-based screen update
-  if (newSampleY + 50 > triggerLevel && newSampleY - 50 < triggerLevel && sampleBuffer[1] < newSampleY && checkForTrigger == true && sinceDisplayUpdated >= numSamples) {
+  if (newSampleY + 5 > triggerLevel && newSampleY - 5 < triggerLevel && sampleBuffer[1] < newSampleY && checkForTrigger == true && sinceDisplayUpdated >= numSamples) {
     // float timePeriod = calculateSignalProperties(t1);
-    updateScreen(dispMode, timeScale, AScale);
+    updateScreen(dispMode, 3, 1);
     // updateInfoBox(timePeriod);  // Update the yellow box with signal properties
     checkForTrigger = false;
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
   }
 
-  t1 = micros() - t0;
-  // Serial.println(t0);
-  Serial.print(" ||");
-  Serial.println(t1);
+  // t1 = micros() - t0;
+  // // Serial.println(t0);
+  // Serial.print(" ||");
+  // Serial.println(t1);
 
   // delayMicroseconds(1);
 }
@@ -330,9 +330,9 @@ int Configure(){
 // Function to trigger ADC conversion using CONVST pin (Mode-1)
 void triggerConversion() {
   digitalWrite(CONVST_PIN, HIGH); // Set CONVST high to power up the ADC
-  delayMicroseconds(1);            // Wait at least 1 microsecond
+  delayMicroseconds(0);            // Wait at least 1 microsecond
   digitalWrite(CONVST_PIN, LOW);   // Set CONVST low to initiate conversion
-  delayMicroseconds(2);            // Wait 2 microseconds for conversion to complete
+  delayMicroseconds(0);            // Wait 2 microseconds for conversion to complete
 }
 
 void updateScreen(char mode, int offSet, float currScale) {
