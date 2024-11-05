@@ -34,6 +34,13 @@ int prevSampleBuffer[numSamples];
 // X-axis position for scrolling the waveform
 int currentX = 0;
 
+// FOR INTERNAL SINEWAVE
+// Variables for simulating the sine wave
+const float frequency = 10.0; // 10Hz sine wave
+const float samplingRate = 10000.0; // 10kHz sampling rate
+const float timeStep = 1.0 / samplingRate; // Time step between samples
+unsigned long startTime = 0;
+
 void setup() {
   Serial.begin(9600);
 
@@ -57,7 +64,12 @@ void setup() {
 
 void loop() {
   // Read a new sample from the analog input
-  int newSample = analogRead(analogPin);
+  // int newSample = analogRead(analogPin);
+
+  // FOR INTERNAL SINEWAVE
+  float time = (millis() - startTime) / 1000.0;  // Convert millis to seconds
+  int newSample = simulateSineWave(time);
+  // int newSample = simulateTriangularWave(time);
 
   // Shift the waveform left, clearing old data as it moves
   scrollWaveform(newSample);
@@ -65,6 +77,39 @@ void loop() {
   // Small delay between frames
   delayMicroseconds(samplingInterval);
 }
+
+
+// FOR INTERNAL SINEWAVE
+int simulateSineWave(float time) {
+  // Sine wave formula: A * sin(2 * PI * f * t) + offset
+  float amplitude = 512.0;  // Half of 1023 for analog range
+  float offset = 512.0;     // Midpoint of 0-1023
+  float sineValue = amplitude * sin(2 * PI * frequency * time) + offset;
+
+  // Convert sine value to an integer in the range of 0-1023
+  return (int)sineValue;
+}
+
+int simulateTriangularWave(float time) {
+    // Parameters
+    float amplitude = 512.0;  // Half of 1023 for the analog range
+    float offset = 0;     // Midpoint of 0-1023
+    float period = 1.0 / frequency;  // Period of the waveform
+
+    // Calculate the time within the current period (wraps around after one period)
+    float t = fmod(time, period);
+
+    // Convert to a triangular wave: increases linearly for the first half of the period, decreases for the second half
+    if (t < period / 2) {
+        // Rising edge: linearly interpolate from 0 to amplitude
+        return (int)(2 * amplitude * (t / (period / 2))) + offset;
+    } else {
+        // Falling edge: linearly interpolate from amplitude back to 0
+        return (int)(2 * amplitude * (1 - (t - (period / 2)) / (period / 2))) + offset;
+    }
+}
+
+
 
 // Function to scroll the waveform and draw the new sample
 void scrollWaveform(int newSample) {
