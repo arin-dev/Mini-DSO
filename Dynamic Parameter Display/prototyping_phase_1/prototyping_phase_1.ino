@@ -3,20 +3,39 @@
 #include <CircularBuffer.hpp>
 #include <math.h>
 
-#define TFT_DC 9
-#define TFT_CS 5
-#define TFT_RST 8
-#define TFT_MOSI 6
-#define TFT_MISO 12
-#define TFT_CLK 7
+// #define TFT_DC 9
+// #define TFT_CS 5
+// #define TFT_RST 8
+// #define TFT_MOSI 6
+// #define TFT_MISO 12
+// #define TFT_CLK 7
+
+//for display
+#define TFT_DC 10
+#define TFT_CS 8
+#define TFT_RST 9
+
+// //ESP  14 12 13 15 3 1
+// #define TFT_CS 14
+// #define TFT_RST 12
+// #define TFT_DC 13
+// #define TFT_MOSI 15
+// #define TFT_CLK 3
+// #define TFT_MISO 0
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
-Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+// Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
+
+// const int inputPin = 10;
+// const int trigPin = 9;
+// const int timePin = 5;
+// const int AScalePin = 4;
 
 const int inputPin = A0;
-const int trigPin = A5;
-const int timePin = A4;
-const int AScalePin = A3;
+const int trigPin = A3;
+const int timePin = A5;
+const int AScalePin = A4;
 
 const int screenWidth = 320;
 const int screenHeight = 240;
@@ -42,6 +61,8 @@ float dutyCycle = 0.0;
 float t0, t1;
 
 void setup() {
+  pinMode(1, INPUT);
+  digitalWrite(1, HIGH);
   Serial.begin(9600);
 
   tft.begin();
