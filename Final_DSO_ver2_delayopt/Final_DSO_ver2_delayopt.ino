@@ -15,21 +15,17 @@
 #define CONFIG_REG 0x02
 #define CONV_RESULT_REG 0x00
 
-// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 
 // const int inputPin = A0;
 const int trigPin = A1;
 const int timePin = A3;
 const int AScalePin = A2;
-// const float scaling_factor = 1.0;
 
-const int screenWidth = 320;
+const int screenWidth = 300;
 const int screenHeight = 240;
 
-// const int numSamples = 310;
-const int numSamples = 320;
-// const int samplingInterval = 100;  // 100 microseconds = 10kHz sampling rate
+const int numSamples = 300;
 
 bool checkForTrigger = true;
 int sinceDisplayUpdated = 0;
@@ -44,9 +40,8 @@ float minValue = 5.0;
 float maxValue = 0.0;
 float peakToPeak = 0;
 float frequency = 0.0;
-// float timePeriod = 0.0;
 float dutyCycle = 0.0;
-// float t0, t1;
+float t0, t1;
 
 //trigger mode 'm' or 'a'
 char triggerMode = 'm';
@@ -55,15 +50,11 @@ void setup() {
   Serial.begin(9600);
   //ADC
   Wire.begin();                // Initialize I2C communication
-  // Wire.setClock(3400000);  //3.4 MHz
   Wire.setClock(400000);  // Set I2C clock to 400 kHz (maximum on Arduino Uno)
 
 
   pinMode(CONVST_PIN, OUTPUT); // Set the CONVST pin as output
   digitalWrite(CONVST_PIN, LOW); // Initialize CONVST to LOW
-
-  // pinMode(3, OUTPUT); // Set the CONVST pin as output
-  // digitalWrite(3, LOW); // Initialize CONVST to LOW
 
   int status = Configure();
 
@@ -118,64 +109,33 @@ void setup() {
 }
 
 void loop() {
-  // float t0, t1;
-  // t0 = micros();
+  t0 = micros();
   int timeScale = read(timePin, 1, 10);
-  // int newSampleY = read(A0, 30, screenHeight - 30);
   int newSampleY = readADCresult(30, screenHeight - 30);
-  // Serial.print(F("value going into dso:"));
-  // Serial.println(newSampleY);
 
   sampleBuffer.unshift(newSampleY);
   sinceDisplayUpdated++;
   int triggerLevel = read(trigPin, 30, screenHeight - 30);
-  // int triggerLevel = 140;
-
-  // int triggerLevel = = read(trigPin, 30, screenHeight - 30);
-//   int triggerLevel = 140;
-
-  // if(triggerMode = 'a'){
-  //     triggerLevel = calculateTriggerLevel();
-  // }
-  // else{
-  //     triggerLevel = read(trigPin, 30, screenHeight - 30);
-  // }
   
 
-  // float AScale = (float)read(AScalePin, 5, 20)/(float)10;
+  float AScale = (float)read(AScalePin, 5, 20)/(float)10;
 
 
   // Trigger-based screen update
-  if (newSampleY + 5 > triggerLevel && newSampleY - 5 < triggerLevel && sampleBuffer[1] < newSampleY && checkForTrigger == true && sinceDisplayUpdated >= numSamples) {
-    // float timePeriod = calculateSignalProperties(t1);
+  if ( sinceDisplayUpdated >= numSamples && checkForTrigger == true && newSampleY + 5 > triggerLevel && newSampleY - 5 < triggerLevel && sampleBuffer[1] < newSampleY) {
+    float time_period = calculateSignalProperties(t1);
     updateScreen(dispMode, timeScale, AScale);
-
-    // updateInfoBox(timePeriod);  // Update the yellow box with signal properties
+    updateInfoBox(time_period);
     checkForTrigger = false;
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
   }
 
-  // t1 = micros() - t0;
-  // // Serial.println(t0);
-  // Serial.print(" ||");
-  // Serial.println(t1);
-
-  // delayMicroseconds(1);
+  t1 = micros() - t0;
+  Serial.print("Delay:");
+  Serial.println(t1);
 }
 
-// //auto trigger computation //the following using mean
-// int calculateTriggerLevel() {
-//     float sum = 0;
-//     int count = sampleBuffer.size();
-
-//     for (int i = 0; i < count; i++) {
-//         sum += sampleBuffer[i];
-//     }
-
-//     // Calculate the average and use it as the trigger level
-//     return sum / count;
-// }
 
 // Function to calculate signal properties
 float calculateSignalProperties(float t1) {
@@ -190,8 +150,6 @@ float calculateSignalProperties(float t1) {
 
   int aboveThreshold = 0;
   int totalSamples = sampleBuffer.size();
-  // Serial.print("totalSamp ---> ");
-  // Serial.println(totalSamples);
 
   // Calculate min, max, and duty cycle
   for (int i = 0; i < totalSamples; i++) {
@@ -202,10 +160,6 @@ float calculateSignalProperties(float t1) {
     if (sample > 2.5) aboveThreshold++;  // Assume 512 is the midpoint for duty cycle
   }
 
-  // Serial.print("Max ---> ");
-  // Serial.print(maxValue);
-  // Serial.print(" || ");
-  // Serial.println(minValue);
   peakToPeak = (maxValue - minValue);
   dutyCycle = ((float)aboveThreshold / totalSamples) * 100.0;
 
@@ -228,12 +182,10 @@ float calculateSignalProperties(float t1) {
     }
   }
 
-  // Serial.println(lastCrossing);
-
   if (lastCrossing != -1) {
     timePeriod = (float)((lastCrossing - firstCrossing) * 2*t1);  //milliseconds
     // Serial.println(timePeriod);
-    frequency = 1000.0*1000.0 / timePeriod;  // Frequency in Hz
+    frequency = 1000.0 / timePeriod;  // Frequency in Hz
   } else {
     timePeriod = 0;
     frequency = 0;
@@ -308,22 +260,13 @@ int readADCresult(int LRange, int HRange){
     // Extract the 12-bit result
     int adcValue = data & 0x0FFF;  // Mask to get only the lower 12 bits
 
-    // Serial.print("Combined Data (16-bit): ");
-    // Serial.println(data, DEC);         // Print the full 16-bit value
-    // Serial.print("ADC Value (12-bit): ");
-    // Serial.println(adcValue);
-    // Serial.println(lsb);
-    // Serial.println(msb);
     data = adcValue;
-    // data = lsb;
 
   }
   else {
     Serial.println(F("Error: ADC result not available."));
     data = 1000;  // Default error value
   }
-  // data = data * scaling_factor;
-  // data = constrain(data,0,4095);
   return map(data, 0, 4095, LRange, HRange);
 }
 
@@ -339,12 +282,9 @@ int Configure(){
 // Function to trigger ADC conversion using CONVST pin (Mode-1)
 void triggerConversion() {
   digitalWrite(CONVST_PIN, HIGH); // Set CONVST high to power up the ADC
-  delayMicroseconds(1);            // Wait at least 1 microsecond
-  // delayMicroseconds(2);
+  // delayMicroseconds(1);            // Wait at least 1 microsecond
   digitalWrite(CONVST_PIN, LOW);   // Set CONVST low to initiate conversion
-  delayMicroseconds(2);            // Wait 2 microseconds for conversion to complete
-  // delayMicroseconds(20);
-
+  // delayMicroseconds(2);            // Wait 2 microseconds for conversion to complete
 }
 
 void updateScreen(char mode, int offSet, float currScale) {
@@ -354,35 +294,26 @@ void updateScreen(char mode, int offSet, float currScale) {
   tft.drawLine(0, 30, 320, 30, ILI9341_BLACK);
   tft.drawLine(0, 210, 320, 210, ILI9341_YELLOW);
 
-  // if(mode == 'l') {
-  //   for (int x = 0; x < numSamples; x++) {
-  //     tft.drawPixel(x, prevSampleBuffer[x], ILI9341_BLACK);
-  //     tft.drawPixel(x, sampleBuffer[x], ILI9341_GREEN);
-  //     prevSampleBuffer[x] = sampleBuffer[x];
-  //   }
-  // } else {
-    {
-    for (int x = 0; x < numSamples - 1; x++){
-      if (x * prevOffSet < numSamples){
-        int prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120;
-        prevScaledY1 = prevScaledY1 > 210 ? 210 : prevScaledY1;
-        prevScaledY1 = prevScaledY1 < 0 ? 0 : prevScaledY1;
-        int prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120;
-        prevScaledY2 = prevScaledY2 > 210 ? 210 : prevScaledY2;
-        prevScaledY2 = prevScaledY2 < 0 ? 0 : prevScaledY2;
-        tft.drawLine(x * prevOffSet, prevScaledY1, (x + 1) * prevOffSet, prevScaledY2, ILI9341_BLACK);
-      }
-      if (x * offSet < numSamples){
-        int currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120;
-        currScaledY1 = currScaledY1 > 210 ? 210 : currScaledY1;
-        currScaledY1 = currScaledY1 < 30 ? 30 : currScaledY1;
-        int currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120;
-        currScaledY2 = currScaledY2 > 210 ? 210 : currScaledY2;
-        currScaledY2 = currScaledY2 < 30 ? 30 : currScaledY2;
-        tft.drawLine(x * offSet, currScaledY1, (x + 1) * offSet, currScaledY2, ILI9341_GREEN);
-      }
-      prevSampleBuffer[x] = sampleBuffer[x];
-    }
+for (int x = 0; x < numSamples - 1; x++){
+  if (x * prevOffSet < numSamples){
+    int prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120;
+    prevScaledY1 = prevScaledY1 > 210 ? 210 : prevScaledY1;
+    prevScaledY1 = prevScaledY1 < 0 ? 0 : prevScaledY1;
+    int prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120;
+    prevScaledY2 = prevScaledY2 > 210 ? 210 : prevScaledY2;
+    prevScaledY2 = prevScaledY2 < 0 ? 0 : prevScaledY2;
+    tft.drawLine(x * prevOffSet, prevScaledY1, (x + 1) * prevOffSet, prevScaledY2, ILI9341_BLACK);
+  }
+  if (x * offSet < numSamples){
+    int currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120;
+    currScaledY1 = currScaledY1 > 210 ? 210 : currScaledY1;
+    currScaledY1 = currScaledY1 < 30 ? 30 : currScaledY1;
+    int currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120;
+    currScaledY2 = currScaledY2 > 210 ? 210 : currScaledY2;
+    currScaledY2 = currScaledY2 < 30 ? 30 : currScaledY2;
+    tft.drawLine(x * offSet, currScaledY1, (x + 1) * offSet, currScaledY2, ILI9341_GREEN);
+  }
+  prevSampleBuffer[x] = sampleBuffer[x];
   }
   
   sinceDisplayUpdated = 0;

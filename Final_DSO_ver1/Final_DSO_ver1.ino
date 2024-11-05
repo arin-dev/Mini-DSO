@@ -24,11 +24,11 @@ const int timePin = A3;
 const int AScalePin = A2;
 // const float scaling_factor = 1.0;
 
-const int screenWidth = 320;
+const int screenWidth = 300;
 const int screenHeight = 240;
 
 // const int numSamples = 310;
-const int numSamples = 320;
+const int numSamples = 300;
 // const int samplingInterval = 100;  // 100 microseconds = 10kHz sampling rate
 
 bool checkForTrigger = true;
@@ -46,7 +46,7 @@ float peakToPeak = 0;
 float frequency = 0.0;
 // float timePeriod = 0.0;
 float dutyCycle = 0.0;
-// float t0, t1;
+float t0, t1;
 
 //trigger mode 'm' or 'a'
 char triggerMode = 'm';
@@ -119,7 +119,9 @@ void setup() {
 
 void loop() {
   // float t0, t1;
-  // t0 = micros();
+  t0 = micros();
+  // Serial.print(" ||");
+  // Serial.println(t0);
   int timeScale = read(timePin, 1, 10);
   // int newSampleY = read(A0, 30, screenHeight - 30);
   int newSampleY = readADCresult(30, screenHeight - 30);
@@ -130,10 +132,6 @@ void loop() {
   sinceDisplayUpdated++;
   int triggerLevel = read(trigPin, 30, screenHeight - 30);
   // int triggerLevel = 140;
-
-  // int triggerLevel = = read(trigPin, 30, screenHeight - 30);
-//   int triggerLevel = 140;
-
   // if(triggerMode = 'a'){
   //     triggerLevel = calculateTriggerLevel();
   // }
@@ -142,22 +140,25 @@ void loop() {
   // }
   
 
-  // float AScale = (float)read(AScalePin, 5, 20)/(float)10;
+  float AScale = (float)read(AScalePin, 5, 20)/(float)10;
 
 
   // Trigger-based screen update
   if (newSampleY + 5 > triggerLevel && newSampleY - 5 < triggerLevel && sampleBuffer[1] < newSampleY && checkForTrigger == true && sinceDisplayUpdated >= numSamples) {
     // float timePeriod = calculateSignalProperties(t1);
+    float time_period = calculateSignalProperties(t1);
     updateScreen(dispMode, timeScale, AScale);
-
+    updateInfoBox(time_period);
+    // updateScreen(dispMode, 10, 1); 
     // updateInfoBox(timePeriod);  // Update the yellow box with signal properties
     checkForTrigger = false;
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
   }
 
-  // t1 = micros() - t0;
-  // // Serial.println(t0);
+  t1 = micros() - t0;
+  // Serial.print(" ||");
+  // Serial.println(t0);
   // Serial.print(" ||");
   // Serial.println(t1);
 
@@ -228,12 +229,13 @@ float calculateSignalProperties(float t1) {
     }
   }
 
-  // Serial.println(lastCrossing);
+  // Serial.println(firstCrossing);
+  // Serial.println(t1);
 
   if (lastCrossing != -1) {
     timePeriod = (float)((lastCrossing - firstCrossing) * 2*t1);  //milliseconds
     // Serial.println(timePeriod);
-    frequency = 1000.0*1000.0 / timePeriod;  // Frequency in Hz
+    frequency = 1000.0 / timePeriod;  // Frequency in Hz
   } else {
     timePeriod = 0;
     frequency = 0;
@@ -344,7 +346,6 @@ void triggerConversion() {
   digitalWrite(CONVST_PIN, LOW);   // Set CONVST low to initiate conversion
   delayMicroseconds(2);            // Wait 2 microseconds for conversion to complete
   // delayMicroseconds(20);
-
 }
 
 void updateScreen(char mode, int offSet, float currScale) {
