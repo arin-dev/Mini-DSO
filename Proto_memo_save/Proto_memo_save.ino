@@ -104,12 +104,13 @@ void loop() {
   sampleBuffer.unshift(newSampleY);
   sinceDisplayUpdated++;
   // uint8_t triggerLevel = 120;
-  uint8_t triggerLevel = read(trigPin, 30, 210);
+  uint8_t triggerLevel = read(trigPin, 35, 205);
 
   if ( checkForTrigger == true && sinceDisplayUpdated >= numSamples && newSampleY + 5 > triggerLevel && newSampleY - 5 < triggerLevel && sampleBuffer[1] < newSampleY ) {
     float time_period = calculateSignalProperties(t1);
     uint8_t timeScale = read(timePin, 1, 5);
     float VoltageScale = float(read(AScalePin, 5, 40))/10.0;
+    // float VoltageScale = 1.0;
     // updateScreen(dispMode, 3, 1);
 
     // updateScreen(dispMode, timeScale, VoltageScale, triggerLevel); // Time , Voltage, triggerLevel
@@ -267,11 +268,15 @@ void triggerConversion() {
 // void updateScreen(char mode, uint8_t offSet, float currScale, uint8_t triggerLevel) {
 void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   static uint8_t prevOffSet = offSet;
-  static uint8_t prevTriggerLevel = triggerLevel;
+  // static uint8_t prevTriggerLevel = triggerLevel;
   static float prevScale = currScale;
 
   tft.drawLine(0, 30, 320, 30, ILI9341_BLACK);
   tft.drawLine(0, 210, 320, 210, ILI9341_YELLOW);
+
+  tft.drawLine(0, 30, 0, 210, ILI9341_BLACK);
+  tft.drawLine(1, 30, 1, 210, ILI9341_BLACK);
+  tft.drawLine(2, 30, 2, 210, ILI9341_BLACK);
 
   // if(mode == 'd') {
   //   for (uint16_t x = 0; x < numSamples; x++) {
@@ -308,13 +313,13 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   prevOffSet = offSet;
   prevScale = currScale;
 
-  tft.drawLine(0, (prevTriggerLevel-1)*prevScale, 3, (prevTriggerLevel-1)*prevScale, ILI9341_YELLOW);
-  tft.drawLine(0, prevTriggerLevel*prevScale, 3, (prevTriggerLevel)*prevScale, ILI9341_YELLOW);
-  tft.drawLine(0, (prevTriggerLevel+1)*prevScale , 3, (prevTriggerLevel+1)*prevScale, ILI9341_YELLOW);
-
-  tft.drawLine(0, (triggerLevel-1)*currScale, 3, (triggerLevel-1)*currScale, ILI9341_RED);
-  tft.drawLine(0, (triggerLevel)*currScale, 3, (triggerLevel)*currScale, ILI9341_RED);
-  tft.drawLine(0, (triggerLevel+1)*currScale , 3, (triggerLevel+1)*currScale, ILI9341_RED);
-
+  uint8_t tl = (triggerLevel - 120) * currScale + 120;
+  tl = tl > 210 ? 205 : tl; 
+  tl = tl < 30 ? 35 : tl;  
+  
+  tft.drawLine(0, tl-1, 2, tl-1, ILI9341_RED);
+  tft.drawLine(0, tl, 2, tl, ILI9341_RED);
+  tft.drawLine(0, tl+1, 2, tl+1, ILI9341_RED);
+  
   return;
 }
