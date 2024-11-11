@@ -39,6 +39,17 @@ float t0, t1;
 
 // char triggerMode = 'a';
 
+#define MINTXT 10
+#define PPTXT 90
+#define FTXT 175
+#define VSTXT 255
+
+#define MPOS 52
+#define PPOS 132
+#define FPOS 217
+#define VSPOS 291
+#define RECT_WIDTH 34
+
 void setup() {
   Serial.begin(9600);
   Wire.begin();
@@ -70,23 +81,29 @@ void setup() {
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(1);
 
-  tft.setCursor(10, 215);
-  tft.print(F("Min: "));
+  tft.setCursor(MINTXT, 215);
+  tft.print(F("Min(v): "));
 
-  tft.setCursor(10, 230);
-  tft.print(F("Max: "));
+  tft.setCursor(MINTXT, 230);
+  tft.print(F("Max(v): "));
 
-  tft.setCursor(120, 215);
-  tft.print("P-P: ");
+  tft.setCursor(PPTXT, 215);
+  tft.print("P2P(v): ");
 
-  tft.setCursor(120, 230);
-  tft.print(F("T: "));
+  tft.setCursor(PPTXT, 230);
+  tft.print(F("T(ns): "));
 
-  tft.setCursor(230, 215);
-  tft.print(F("Freq: "));
+  tft.setCursor(FTXT, 215);
+  tft.print(F("F(KHz): "));
 
-  tft.setCursor(230, 230);
-  tft.print(F("Duty: "));
+  tft.setCursor(FTXT, 230);
+  tft.print(F("Dut(%): "));
+
+  tft.setCursor(VSTXT, 215);
+  tft.print(F("VS(x): "));
+
+  tft.setCursor(VSTXT, 230);
+  tft.print(F("TS(x): "));
 
   for (uint16_t i = 0; i < numSamples; i++) {
     sampleBuffer.unshift(0);
@@ -115,7 +132,7 @@ void loop() {
 
     // updateScreen(dispMode, timeScale, VoltageScale, triggerLevel); // Time , Voltage, triggerLevel
     updateScreen(timeScale, VoltageScale, triggerLevel); // Time , Voltage, triggerLevel
-    updateInfoBox(time_period);
+    updateInfoBox(time_period, VoltageScale, timeScale);
     checkForTrigger = false;
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
@@ -130,7 +147,7 @@ void loop() {
     uint8_t tl = (triggerLevel - 120) * VoltageScale + 120;
     tl = tl > 210 ? 205 : tl; 
     tl = tl < 30 ? 35 : tl;  
-  
+
     tft.drawLine(0, tl-1, 2, tl-1, ILI9341_RED);
     tft.drawLine(0, tl, 2, tl, ILI9341_RED);
     tft.drawLine(0, tl+1, 2, tl+1, ILI9341_RED);
@@ -177,7 +194,7 @@ float calculateSignalProperties(float t1) {
   }
 
   if (lastCrossing != -1) {
-    timePeriod = (float)((lastCrossing - firstCrossing) * 2*t1);
+    timePeriod = (float)((lastCrossing - firstCrossing) * 2*t1); //in us
     frequency = 1000.0 / timePeriod;
   } else {
     timePeriod = 0;
@@ -186,47 +203,55 @@ float calculateSignalProperties(float t1) {
   return timePeriod;
 }
 
+
 // Function to update the yellow info box with calculated values
-void updateInfoBox(float timePeriod) {
-  tft.fillRect(45, 215, 65, 30, ILI9341_YELLOW);  // Clear the previous values
-  tft.fillRect(155, 215, 65, 30, ILI9341_YELLOW); // Clear P-P, T
-  tft.fillRect(260, 215, 60, 30, ILI9341_YELLOW); // Clear Freq, Duty
+void updateInfoBox(float timePeriod, float VoltageScale, uint8_t timeScale) {
+  tft.fillRect(MPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW);  // Clear the previous values
+  tft.fillRect(PPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear P-P, T
+  tft.fillRect(FPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear Freq, Duty
+  tft.fillRect(VSPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear vScale, tScale
 
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(1);
 
   // Update Min, Max, P-P, T, Freq, Duty Cycle values
-  tft.setCursor(45, 215);
+  tft.setCursor(MPOS, 215);
   tft.print(minValue);
   // tft.print(" V");
 
-  tft.setCursor(45, 230);
+  tft.setCursor(MPOS, 230);
   tft.print(maxValue);
   // tft.print(" V");
 
-  tft.setCursor(155, 215);
+  tft.setCursor(PPOS, 215);
   tft.print(peakToPeak);
   // tft.print(" V");
 
-  tft.setCursor(155, 230);
-  if (timePeriod > 0) {
-    tft.print(timePeriod, 2);
+  tft.setCursor(PPOS, 230);
+  if (timePeriod/1000 > 0) {
+    tft.print(timePeriod/1000, 2); //displayed in ns
     // tft.print(" s");
   } else {
-    tft.print("---");
+    tft.print("--");
   }
 
-  tft.setCursor(260, 215);
-  if (frequency > 0) {
-    tft.print(frequency, 2);
+  tft.setCursor(FPOS, 215);
+  if (frequency*1000 > 0) {
+    tft.print(frequency*1000, 2); //in KHz
     // tft.print(" Hz");
   } else {
-    tft.print("---");
+    tft.print("--");
   }
 
-  tft.setCursor(260, 230);
+  tft.setCursor(FPOS, 230);
   tft.print(dutyCycle, 1);
   // tft.print("%");
+
+  tft.setCursor(VSPOS, 215);
+  tft.print(VoltageScale, 1);
+
+  tft.setCursor(VSPOS, 230);
+  tft.print(timeScale, 1);
 }
 
 int read(int Pin, int HRange, int LRange){

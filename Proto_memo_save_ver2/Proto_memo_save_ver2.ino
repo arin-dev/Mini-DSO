@@ -17,6 +17,17 @@
 #define CONFIG_REG 0x02
 #define CONV_RESULT_REG 0x00
 
+#define MINTXT 10
+#define PPTXT 90
+#define FTXT 175
+#define VSTXT 255
+
+#define MPOS 52
+#define PPOS 132
+#define FPOS 217
+#define VSPOS 291
+#define RECT_WIDTH 34
+
 Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
 
 const uint8_t trigPin = A1;
@@ -46,6 +57,7 @@ float dutyCycle = 0;
 float t0, t1;
 
 // char triggerMode = 'a';
+unsigned long long startTime = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -80,29 +92,29 @@ void setup() {
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(1);
 
-  tft.setCursor(10, 215);
-  tft.print(F("Min: "));
+  tft.setCursor(MINTXT, 215);
+  tft.print(F("Min(v): "));
 
-  tft.setCursor(10, 230);
-  tft.print(F("Max: "));
+  tft.setCursor(MINTXT, 230);
+  tft.print(F("Max(v): "));
 
-  tft.setCursor(110, 215);
-  tft.print(F("P-P: "));
+  tft.setCursor(PPTXT, 215);
+  tft.print("P2P(v): ");
 
-  tft.setCursor(110, 230);
-  tft.print(F("T: "));
+  tft.setCursor(PPTXT, 230);
+  tft.print(F("T(ns): "));
 
-  tft.setCursor(230, 215);
-  tft.print(F("Freq: "));
+  tft.setCursor(FTXT, 215);
+  tft.print(F("F(KHz): "));
 
-  tft.setCursor(230, 230);
-  tft.print(F("Duty: "));
+  tft.setCursor(FTXT, 230);
+  tft.print(F("Dut(%): "));
 
-  // tft.setCursor(230,215);
-  // tft.print(F("V"));
+  tft.setCursor(VSTXT, 215);
+  tft.print(F("VS(x): "));
 
-  // tft.setCursor(230,230);
-  // tft.print(F("F"));
+  tft.setCursor(VSTXT, 230);
+  tft.print(F("TS(x): "));
 
   for (uint16_t i = 0; i < numSamples; i++) {
     sampleBuffer.unshift(0);
@@ -115,7 +127,10 @@ void setup() {
 void loop() {
   t0 = micros();
 
-  uint8_t newSampleY = readADCresult(30, screenHeight - 30) + Vmov;
+  // uint8_t newSampleY = readADCresult(30, screenHeight - 30) + Vmov;
+  float time = (micros() - startTime) / 1000000.0;
+  uint8_t newSampleY = map(simulateSineWave(t0), 0, 1024, 30, 210);
+  // Serial.println(newSampleY);
 
   sampleBuffer.unshift(newSampleY);
   sinceDisplayUpdated++;
@@ -133,7 +148,7 @@ void loop() {
     }
     if(((digitalRead(DIP1)==0)&(digitalRead(DIP2)==1)&(digitalRead(DIP3)==1))){
       //do horizontal moving
-      Xmov = read(MuxPin,0,50);
+      Xmov = read(MuxPin,-50,50);
     }
     float VoltageScale = float(read(AScalePin, 5, 40))/10.0;
     // float VoltageScale = 1.0;
@@ -141,16 +156,25 @@ void loop() {
 
     // updateScreen(dispMode, timeScale, VoltageScale, triggerLevel); // Time , Voltage, triggerLevel
     updateScreen(timeScale, VoltageScale, triggerLevel); // Time , Voltage, triggerLevel
-    updateInfoBox(time_period);
+    updateInfoBox(time_period, VoltageScale, timeScale);
     checkForTrigger = false;
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
-  } 
-  // else if(sinceDisplayUpdated > 8192){
-  //   tft.drawLine(0, triggerLevel, 5, triggerLevel, ILI9341_WHITE);
-  //   tft.drawLine(0, triggerLevel+1 , 5, triggerLevel+1, ILI9341_WHITE);
-  //   tft.drawLine(0, triggerLevel+2, 5, triggerLevel+2, ILI9341_WHITE);
-  // }
+  }
+    else if (sinceDisplayUpdated > 3000){
+    sinceDisplayUpdated = 0;
+    tft.drawLine(0, 30, 0, 210, ILI9341_BLACK);
+    tft.drawLine(1, 30, 1, 210, ILI9341_BLACK);
+    tft.drawLine(2, 30, 2, 210, ILI9341_BLACK);
+    float VoltageScale = float(read(AScalePin, 5, 40))/10.0;    
+    int tl = (triggerLevel - 120) * VoltageScale + 120;
+    tl = tl > 210 ? 205 : tl; 
+    tl = tl < 30 ? 35 : tl;  
+  
+    tft.drawLine(0, tl-1, 2, tl-1, ILI9341_RED);
+    tft.drawLine(0, tl, 2, tl, ILI9341_RED);
+    tft.drawLine(0, tl+1, 2, tl+1, ILI9341_RED);
+  }
   t1 = micros() - t0;
 }
 
@@ -194,7 +218,7 @@ float calculateSignalProperties(float t1) {
 
   if (lastCrossing != -1) {
     timePeriod = (float)((lastCrossing - firstCrossing) * 2*t1);
-    frequency = 1000.0 / timePeriod;
+    frequency = 1 / timePeriod*1000;
   } else {
     timePeriod = 0;
     frequency = 0;
@@ -203,46 +227,53 @@ float calculateSignalProperties(float t1) {
 }
 
 // Function to update the yellow info box with calculated values
-void updateInfoBox(float timePeriod) {
-  tft.fillRect(45, 215, 65, 30, ILI9341_YELLOW);  // Clear the previous values
-  tft.fillRect(155, 215, 65, 30, ILI9341_YELLOW); // Clear P-P, T
-  tft.fillRect(260, 215, 60, 30, ILI9341_YELLOW); // Clear Freq, Duty
+void updateInfoBox(float timePeriod, float VoltageScale, uint8_t timeScale) {
+  tft.fillRect(MPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW);  // Clear the previous values
+  tft.fillRect(PPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear P-P, T
+  tft.fillRect(FPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear Freq, Duty
+  tft.fillRect(VSPOS, 215, RECT_WIDTH, 30, ILI9341_YELLOW); // Clear vScale, tScale
 
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(1);
 
   // Update Min, Max, P-P, T, Freq, Duty Cycle values
-  tft.setCursor(45, 215);
+  tft.setCursor(MPOS, 215);
   tft.print(minValue);
   // tft.print(" V");
 
-  tft.setCursor(45, 230);
+  tft.setCursor(MPOS, 230);
   tft.print(maxValue);
   // tft.print(" V");
 
-  tft.setCursor(155, 215);
+  tft.setCursor(PPOS, 215);
   tft.print(peakToPeak);
   // tft.print(" V");
 
-  tft.setCursor(155, 230);
-  if (timePeriod > 0) {
-    tft.print(timePeriod, 2);
+  tft.setCursor(PPOS, 230);
+  if (timePeriod/1000 > 0) {
+    tft.print(timePeriod/1000, 2); //displayed in ns
     // tft.print(" s");
   } else {
-    tft.print("---");
+    tft.print("--");
   }
 
-  tft.setCursor(260, 215);
+  tft.setCursor(FPOS, 215);
   if (frequency > 0) {
-    tft.print(frequency, 2);
+    tft.print(frequency, 2); //in KHz
     // tft.print(" Hz");
   } else {
-    tft.print("---");
+    tft.print("--");
   }
 
-  tft.setCursor(260, 230);
+  tft.setCursor(FPOS, 230);
   tft.print(dutyCycle, 1);
   // tft.print("%");
+
+  tft.setCursor(VSPOS, 215);
+  tft.print(VoltageScale, 1);
+
+  tft.setCursor(VSPOS, 230);
+  tft.print(timeScale, 1);
 }
 
 int read(int Pin, int HRange, int LRange){
@@ -294,7 +325,8 @@ void triggerConversion() {
 // void updateScreen(char mode, uint8_t offSet, float currScale, uint8_t triggerLevel) {
 void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   static uint8_t prevOffSet = offSet;
-  static uint8_t prevXmov = Xmov;
+  static int prevXmov = Xmov;
+  static int prevVmov = Vmov;
   // static uint8_t prevTriggerLevel = triggerLevel;
   static float prevScale = currScale;
 
@@ -315,19 +347,19 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   {
     for (int x = 0; x < numSamples - 1; x++){
       if (x * prevOffSet + prevXmov < numSamples && x * prevOffSet + prevXmov >= 0){
-        int16_t prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120;
+        int prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120 + prevVmov;
         prevScaledY1 = prevScaledY1 > 210 ? 210 : prevScaledY1;
-        prevScaledY1 = prevScaledY1 < 0 ? 0 : prevScaledY1;
-        int16_t prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120;
+        prevScaledY1 = prevScaledY1 < 30 ? 30 : prevScaledY1;
+        int prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120 + prevVmov;
         prevScaledY2 = prevScaledY2 > 210 ? 210 : prevScaledY2;
-        prevScaledY2 = prevScaledY2 < 0 ? 0 : prevScaledY2;
+        prevScaledY2 = prevScaledY2 < 30 ? 30 : prevScaledY2;
         tft.drawLine(x * prevOffSet + prevXmov, prevScaledY1, (x + 1) * prevOffSet+ prevXmov, prevScaledY2, ILI9341_BLACK);
       }
       if (x * offSet + Xmov < numSamples && x * offSet + Xmov >= 0){
-        int16_t currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120;
+        int currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120 + Vmov;
         currScaledY1 = currScaledY1 > 210 ? 210 : currScaledY1;
         currScaledY1 = currScaledY1 < 30 ? 30 : currScaledY1;
-        int16_t currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120;
+        int currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120 + Vmov;
         currScaledY2 = currScaledY2 > 210 ? 210 : currScaledY2;
         currScaledY2 = currScaledY2 < 30 ? 30 : currScaledY2;
         tft.drawLine(x * offSet + Xmov, currScaledY1, (x + 1) * offSet + Xmov, currScaledY2, ILI9341_GREEN);
@@ -340,8 +372,9 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   prevOffSet = offSet;
   prevScale = currScale;
   prevXmov = Xmov;
+  prevVmov = Vmov;
 
-  uint8_t tl = (triggerLevel - 120) * currScale + 120;
+  int tl = (triggerLevel - 120) * currScale + 120;
   tl = tl > 210 ? 205 : tl; 
   tl = tl < 30 ? 35 : tl;  
   
@@ -350,4 +383,17 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   tft.drawLine(0, tl+1, 2, tl+1, ILI9341_RED);
   
   return;
+}
+
+
+// remove this afterwards
+
+int simulateSineWave(float time) {
+  // Sine wave formula: A * sin(2 * PI * f * t) + offset
+  float amplitude = 512.0;  // Half of 1023 for analog range
+  float offset = 512.0;     // Midpoint of 0-1023
+  float sineValue = amplitude * sin(2 * 3.14 * 0.0001 * time) + offset;
+
+  // Convert sine value to an integer in the range of 0-1023
+  return (int)sineValue;
 }
