@@ -120,11 +120,21 @@ void loop() {
   } else if (newSampleY < triggerLevel) {
     checkForTrigger = true;
   } 
-  // else if(sinceDisplayUpdated > 8192){
-  //   tft.drawLine(0, triggerLevel, 5, triggerLevel, ILI9341_WHITE);
-  //   tft.drawLine(0, triggerLevel+1 , 5, triggerLevel+1, ILI9341_WHITE);
-  //   tft.drawLine(0, triggerLevel+2, 5, triggerLevel+2, ILI9341_WHITE);
-  // }
+  else if(sinceDisplayUpdated > 8192){
+    sinceDisplayUpdated = 0;
+    tft.drawLine(0, 30, 0, 210, ILI9341_BLACK);
+    tft.drawLine(1, 30, 1, 210, ILI9341_BLACK);
+    tft.drawLine(2, 30, 2, 210, ILI9341_BLACK);
+
+    float VoltageScale = float(read(AScalePin, 5, 40))/10.0;    
+    uint8_t tl = (triggerLevel - 120) * VoltageScale + 120;
+    tl = tl > 210 ? 205 : tl; 
+    tl = tl < 30 ? 35 : tl;  
+  
+    tft.drawLine(0, tl-1, 2, tl-1, ILI9341_RED);
+    tft.drawLine(0, tl, 2, tl, ILI9341_RED);
+    tft.drawLine(0, tl+1, 2, tl+1, ILI9341_RED);
+  }
   t1 = micros() - t0;
 }
 
