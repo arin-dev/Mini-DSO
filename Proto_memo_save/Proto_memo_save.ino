@@ -298,19 +298,19 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   {
     for (uint16_t x = 0; x < numSamples - 1; x++){
       if (x * prevOffSet < numSamples){
-        int16_t prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120;
+        int prevScaledY1 = (prevSampleBuffer[x] - 120) * prevScale + 120;
         prevScaledY1 = prevScaledY1 > 210 ? 210 : prevScaledY1;
-        prevScaledY1 = prevScaledY1 < 0 ? 0 : prevScaledY1;
-        int16_t prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120;
+        prevScaledY1 = prevScaledY1 < 30 ? 30 : prevScaledY1;
+        int prevScaledY2 = (prevSampleBuffer[x + 1] - 120) * prevScale + 120;
         prevScaledY2 = prevScaledY2 > 210 ? 210 : prevScaledY2;
-        prevScaledY2 = prevScaledY2 < 0 ? 0 : prevScaledY2;
+        prevScaledY2 = prevScaledY2 < 30 ? 30 : prevScaledY2;
         tft.drawLine(x * prevOffSet, prevScaledY1, (x + 1) * prevOffSet, prevScaledY2, ILI9341_BLACK);
       }
       if (x * offSet < numSamples){
-        int16_t currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120;
+        int currScaledY1 = (sampleBuffer[x] - 120) * currScale + 120;
         currScaledY1 = currScaledY1 > 210 ? 210 : currScaledY1;
         currScaledY1 = currScaledY1 < 30 ? 30 : currScaledY1;
-        int16_t currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120;
+        int currScaledY2 = (sampleBuffer[x + 1] - 120) * currScale + 120;
         currScaledY2 = currScaledY2 > 210 ? 210 : currScaledY2;
         currScaledY2 = currScaledY2 < 30 ? 30 : currScaledY2;
         tft.drawLine(x * offSet, currScaledY1, (x + 1) * offSet, currScaledY2, ILI9341_GREEN);
@@ -323,7 +323,7 @@ void updateScreen(uint8_t offSet, float currScale, uint8_t triggerLevel) {
   prevOffSet = offSet;
   prevScale = currScale;
 
-  uint8_t tl = (triggerLevel - 120) * currScale + 120;
+  uint16_t tl = (triggerLevel - 120) * currScale + 120;
   tl = tl > 210 ? 205 : tl; 
   tl = tl < 30 ? 35 : tl;  
   
